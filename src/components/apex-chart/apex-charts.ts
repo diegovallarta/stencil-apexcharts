@@ -1,4 +1,4 @@
-import { ApexOptions } from "apexcharts";
+import { ApexOptions } from 'apexcharts';
 
 export type ApexChartType = ApexChart['type'];
 export type ApexChartWidth = ApexChart['width'];

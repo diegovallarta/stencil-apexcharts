@@ -5,23 +5,21 @@
  */
 
 
-import '@stencil/core';
-
-
-import {
-  ApexOptions,
-} from 'apexcharts';
+import { HTMLStencilElement, JSXBase } from '@stencil/core/internal';
 import {
   ApexChartHeight,
   ApexChartType,
   ApexChartWidth,
   ApexOptionsSeries,
 } from './components/apex-chart/apex-charts';
+import {
+  ApexOptions,
+} from 'apexcharts';
 
 
 export namespace Components {
-
   interface ApexChart {
+    'getApexChart': () => Promise<ApexCharts>;
     /**
     * (optional) Height
     */
@@ -47,7 +45,10 @@ export namespace Components {
     */
     'width'?: ApexChartWidth;
   }
-  interface ApexChartAttributes extends StencilHTMLAttributes {
+}
+
+declare namespace LocalJSX {
+  interface ApexChart extends JSXBase.HTMLAttributes {
     /**
     * (optional) Height
     */
@@ -69,16 +70,24 @@ export namespace Components {
     */
     'width'?: ApexChartWidth;
   }
+
+  interface IntrinsicElements {
+    'apex-chart': ApexChart;
+  }
 }
 
-declare global {
-  interface StencilElementInterfaces {
-    'ApexChart': Components.ApexChart;
-  }
+export { LocalJSX as JSX };
 
-  interface StencilIntrinsicElements {
-    'apex-chart': Components.ApexChartAttributes;
+
+declare module "@stencil/core" {
+  export namespace JSX {
+    interface IntrinsicElements extends LocalJSX.IntrinsicElements {}
   }
+}
+
+
+declare global {
+
 
 
   interface HTMLApexChartElement extends Components.ApexChart, HTMLStencilElement {}
@@ -88,20 +97,9 @@ declare global {
   };
 
   interface HTMLElementTagNameMap {
-    'apex-chart': HTMLApexChartElement
-  }
-
-  interface ElementTagNameMap {
     'apex-chart': HTMLApexChartElement;
   }
 
-
-  export namespace JSX {
-    export interface Element {}
-    export interface IntrinsicElements extends StencilIntrinsicElements {
-      [tagName: string]: any;
-    }
-  }
-  export interface HTMLAttributes extends StencilHTMLAttributes {}
-
+  interface ElementTagNameMap extends HTMLElementTagNameMap {}
 }
+

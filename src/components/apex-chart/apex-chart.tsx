@@ -1,4 +1,4 @@
-import { Component, Prop, State, Watch, Method } from '@stencil/core';
+import { Component, Prop, State, Watch, Method, h } from '@stencil/core';
 import ApexCharts from 'apexcharts';
 import { ApexOptions } from 'apexcharts';
 import {

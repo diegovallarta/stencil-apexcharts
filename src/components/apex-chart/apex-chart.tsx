@@ -106,6 +106,11 @@ export class chart {
     return this.chartObj.updateOptions(newOptions, redrawPaths, animate);
   }
 
+  @Method()
+  async getApexChart() {
+    return this.chartObj;
+  }
+
   async componentDidLoad() {
     if (this.chartObj === null) {
       this.chartObj = new ApexCharts(

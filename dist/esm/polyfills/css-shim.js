@@ -335,7 +335,7 @@ function getSelectors(root, index) {
                 selectors.push({
                     selector: selector,
                     declarations: declarations,
-                    specificity: computeSpecificity(selector),
+                    specificity: computeSpecificity(),
                     nu: index
                 });
             });

@@ -16,7 +16,6 @@ import {
   ApexOptions,
 } from 'apexcharts';
 
-
 export namespace Components {
   interface ApexChart {
     'getApexChart': () => Promise<ApexCharts>;
@@ -47,8 +46,21 @@ export namespace Components {
   }
 }
 
+declare global {
+
+
+  interface HTMLApexChartElement extends Components.ApexChart, HTMLStencilElement {}
+  var HTMLApexChartElement: {
+    prototype: HTMLApexChartElement;
+    new (): HTMLApexChartElement;
+  };
+  interface HTMLElementTagNameMap {
+    'apex-chart': HTMLApexChartElement;
+  }
+}
+
 declare namespace LocalJSX {
-  interface ApexChart extends JSXBase.HTMLAttributes {
+  interface ApexChart extends JSXBase.HTMLAttributes<HTMLApexChartElement> {
     /**
     * (optional) Height
     */
@@ -85,21 +97,4 @@ declare module "@stencil/core" {
   }
 }
 
-
-declare global {
-
-
-
-  interface HTMLApexChartElement extends Components.ApexChart, HTMLStencilElement {}
-  var HTMLApexChartElement: {
-    prototype: HTMLApexChartElement;
-    new (): HTMLApexChartElement;
-  };
-
-  interface HTMLElementTagNameMap {
-    'apex-chart': HTMLApexChartElement;
-  }
-
-  interface ElementTagNameMap extends HTMLElementTagNameMap {}
-}
 

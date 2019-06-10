@@ -47,7 +47,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 var _this = this;
-var BUILD = { "allRenderFn": true, "cmpDidLoad": true, "cmpDidUnload": true, "cmpDidUpdate": false, "cmpDidRender": false, "cmpWillLoad": false, "cmpWillUpdate": false, "cmpWillRender": false, "connectedCallback": false, "disconnectedCallback": false, "element": false, "event": false, "hasRenderFn": true, "lifecycle": true, "hostListener": false, "hostListenerTargetWindow": false, "hostListenerTargetDocument": false, "hostListenerTargetBody": false, "hostListenerTargetParent": false, "hostListenerTarget": false, "member": true, "method": true, "mode": false, "noVdomRender": false, "observeAttribute": true, "prop": true, "propMutable": true, "reflect": false, "scoped": false, "shadowDom": false, "slot": false, "slotRelocation": false, "state": true, "style": true, "svg": false, "updatable": true, "vdomAttribute": true, "vdomClass": true, "vdomFunctional": true, "vdomKey": true, "vdomListener": true, "vdomRef": true, "vdomRender": true, "vdomStyle": true, "vdomText": true, "watchCallback": true, "taskQueue": true, "lazyLoad": true, "hydrateServerSide": false, "cssVarShim": true, "hydrateClientSide": false, "isDebug": false, "isDev": false, "lifecycleDOMEvents": false, "profile": false, "hotModuleReplacement": false, "constructableCSS": true, "cssAnnotations": true };
+var BUILD = { "allRenderFn": true, "cmpDidLoad": true, "cmpDidUnload": true, "cmpDidUpdate": false, "cmpDidRender": false, "cmpWillLoad": false, "cmpWillUpdate": false, "cmpWillRender": false, "connectedCallback": false, "disconnectedCallback": false, "element": false, "event": false, "hasRenderFn": true, "lifecycle": true, "hostListener": false, "hostListenerTargetWindow": false, "hostListenerTargetDocument": false, "hostListenerTargetBody": false, "hostListenerTargetParent": false, "hostListenerTarget": false, "member": true, "method": true, "mode": false, "noVdomRender": false, "observeAttribute": true, "prop": true, "propBoolean": false, "propNumber": false, "propString": true, "propMutable": true, "reflect": false, "scoped": false, "shadowDom": false, "slot": false, "slotRelocation": false, "state": true, "style": true, "svg": false, "updatable": true, "vdomAttribute": true, "vdomClass": true, "vdomFunctional": true, "vdomKey": true, "vdomListener": true, "vdomRef": true, "vdomRender": true, "vdomStyle": true, "vdomText": true, "watchCallback": true, "taskQueue": true, "lazyLoad": true, "hydrateServerSide": false, "cssVarShim": true, "hydrateClientSide": false, "isDebug": false, "isDev": false, "lifecycleDOMEvents": false, "profile": false, "hotModuleReplacement": false, "constructableCSS": true, "cssAnnotations": true };
 var NAMESPACE = 'apex';
 var win = window;
 var doc = document;
@@ -58,6 +58,7 @@ var plt = {
     ael: function (el, eventName, listener, opts) { return el.addEventListener(eventName, listener, opts); },
     rel: function (el, eventName, listener, opts) { return el.removeEventListener(eventName, listener, opts); },
 };
+var supportsShadowDom = false;
 var supportsConstructibleStylesheets = (function () {
     try {
         new CSSStyleSheet();
@@ -70,16 +71,13 @@ var hostRefs = new WeakMap();
 var getHostRef = function (ref) { return hostRefs.get(ref); };
 var registerInstance = function (lazyInstance, hostRef) { return hostRefs.set(hostRef.$lazyInstance$ = lazyInstance, hostRef); };
 var registerHost = function (elm) {
-    // TODO: it's so ugly, but minifies really well
     {
         var hostRef_1 = {
             $flags$: 0,
-            $hostElement$: elm
+            $hostElement$: elm,
+            $instanceValues$: new Map()
         };
         hostRef_1.$onReadyPromise$ = new Promise(function (r) { return hostRef_1.$onReadyResolve$ = r; });
-        {
-            hostRef_1.$instanceValues$ = new Map();
-        }
         return hostRefs.set(elm, hostRef_1);
     }
 };
@@ -174,6 +172,7 @@ var writeTask = /*@__PURE__*/ queueTask(queueDomWrites);
 var EMPTY_OBJ = {};
 var isDef = function (v) { return v != null; };
 var toLowerCase = function (str) { return str.toLowerCase(); };
+var isComplexType = function (o) { return ['object', 'function'].includes(typeof o); };
 function getDynamicImportFunction(namespace) {
     return "__sc_import_" + namespace.replace(/\s|-/g, '_');
 }
@@ -181,7 +180,7 @@ var patchEsm = function () {
     // @ts-ignore
     if (!(win.CSS && win.CSS.supports && win.CSS.supports('color', 'var(--c)'))) {
         // @ts-ignore
-        return import('./css-shim-229ebf7a-229ebf7a.js');
+        return import('./css-shim-f7ddb189-f7ddb189.js');
     }
     return Promise.resolve();
 };
@@ -196,11 +195,11 @@ var patchBrowser = function () { return __awaiter(_this, void 0, void 0, functio
             case 1:
                 scriptElm = Array.from(doc.querySelectorAll('script')).find(function (s) { return (s.src.includes("/" + NAMESPACE + ".esm.js") ||
                     s.getAttribute('data-namespace') === NAMESPACE); });
-                resourcesUrl = new URL('.', new URL(scriptElm.getAttribute('data-resources-url') || scriptElm.src, doc.baseURI));
+                resourcesUrl = new URL('.', new URL(scriptElm.getAttribute('data-resources-url') || scriptElm.src, win.location.href));
                 patchDynamicImport(resourcesUrl.href);
                 if (!!window.customElements) return [3 /*break*/, 3];
                 // @ts-ignore
-                return [4 /*yield*/, import('./dom-7eb7509a-7eb7509a.js')];
+                return [4 /*yield*/, import('./dom-a0c82e31-a0c82e31.js')];
             case 2:
                 // @ts-ignore
                 _a.sent();
@@ -250,7 +249,7 @@ var registerStyle = function (scopeId, cssText) {
     styles.set(scopeId, style);
 };
 var addStyle = function (styleContainerNode, tagName, mode, hostElm) {
-    var scopeId = getScopeId(tagName, mode);
+    var scopeId = getScopeId(tagName);
     var style = styles.get(scopeId);
     // if an element is NOT connected then getRootNode() will return the wrong root node
     // so the fallback is to always use the document for the root node in those cases
@@ -307,91 +306,74 @@ var getScopeId = function (tagName, mode) { return 'sc-' + (tagName); };
  *
  * Modified for Stencil's compiler and vdom
  */
-var stack = [];
-function h(nodeName, vnodeData) {
-    var children = null;
-    var lastSimple = false;
-    var simple = false;
-    var i = arguments.length;
-    var vkey;
-    for (; i-- > 2;) {
-        stack.push(arguments[i]);
+// const stack: any[] = [];
+// export function h(nodeName: string | d.FunctionalComponent, vnodeData: d.PropsType, child?: d.ChildType): d.VNode;
+// export function h(nodeName: string | d.FunctionalComponent, vnodeData: d.PropsType, ...children: d.ChildType[]): d.VNode;
+var h = function (nodeName, vnodeData) {
+    var children = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+        children[_i - 2] = arguments[_i];
     }
-    while (stack.length > 0) {
-        var child = stack.pop();
-        if (child && child.pop !== undefined) {
-            for (i = child.length; i--;) {
-                stack.push(child[i]);
+    var child = null;
+    var simple = false;
+    var lastSimple = false;
+    var key;
+    var vNodeChildren = [];
+    var walk = function (c) {
+        for (var i = 0; i < c.length; i++) {
+            child = c[i];
+            if (Array.isArray(child)) {
+                walk(child);
             }
-        }
-        else {
-            if (typeof child === 'boolean') {
-                child = null;
-            }
-            if ((simple = typeof nodeName !== 'function')) {
-                if (child == null) {
-                    child = '';
-                }
-                else if (typeof child === 'number') {
+            else if (child != null && typeof child !== 'boolean') {
+                if (simple = typeof nodeName !== 'function' && !isComplexType(child)) {
                     child = String(child);
                 }
-                else if (typeof child !== 'string') {
-                    simple = false;
+                if (simple && lastSimple) {
+                    // If the previous child was simple (string), we merge both
+                    vNodeChildren[vNodeChildren.length - 1].$text$ += child;
                 }
+                else {
+                    // Append a new vNode, if it's text, we create a text vNode
+                    vNodeChildren.push(simple ? { $flags$: 0, $text$: child } : child);
+                }
+                lastSimple = simple;
             }
-            if (simple && lastSimple) {
-                children[children.length - 1].$text$ += child;
-            }
-            else if (children === null) {
-                children = [simple ? { $flags$: 0, $text$: child } : child];
-            }
-            else {
-                children.push(simple ? { $flags$: 0, $text$: child } : child);
-            }
-            lastSimple = simple;
         }
-    }
-    {
-        if (vnodeData != null) {
-            // normalize class / classname attributes
-            if (vnodeData.className) {
-                vnodeData['class'] = vnodeData.className;
-            }
-            if (typeof vnodeData['class'] === 'object') {
-                for (i in vnodeData['class']) {
-                    if (vnodeData['class'][i]) {
-                        stack.push(i);
-                    }
-                }
-                vnodeData['class'] = stack.join(' ');
-                stack.length = 0;
-            }
-            if (vnodeData.key != null) {
-                vkey = vnodeData.key;
+    };
+    walk(children);
+    if (vnodeData) {
+        // normalize class / classname attributes
+        {
+            key = vnodeData.key || undefined;
+        }
+        {
+            var classData_1 = vnodeData.className || vnodeData.class;
+            if (classData_1) {
+                vnodeData.class = typeof classData_1 !== 'object'
+                    ? classData_1
+                    : Object.keys(classData_1)
+                        .filter(function (k) { return classData_1[k]; })
+                        .join(' ');
             }
         }
     }
     if (typeof nodeName === 'function') {
         // nodeName is a functional component
-        return nodeName(vnodeData, children || [], vdomFnUtils);
+        return nodeName(vnodeData, vNodeChildren, vdomFnUtils);
     }
     var vnode = {
+        $flags$: 0,
         $tag$: nodeName,
-        $children$: children,
+        $children$: vNodeChildren.length > 0 ? vNodeChildren : null,
         $elm$: undefined,
-        $flags$: 0
+        $attrs$: vnodeData,
     };
     {
-        vnode.$attrs$ = vnodeData;
-    }
-    {
-        vnode.$text$ = undefined;
-    }
-    {
-        vnode.$key$ = vkey;
+        vnode.$key$ = key;
     }
     return vnode;
-}
+};
 var Host = {};
 var vdomFnUtils = {
     'forEach': function (children, cb) { return children.map(convertToPublic).forEach(cb); },
@@ -501,7 +483,7 @@ var setAccessor = function (elm, memberName, oldValue, newValue, isSvg, flags) {
     else {
         // Set property if it exists and it's not a SVG
         var isProp = isMemberInElement(elm, memberName);
-        var isComplex = ['object', 'function'].includes(typeof newValue);
+        var isComplex = isComplexType(newValue);
         if ((isProp || (isComplex && newValue !== null)) && !isSvg) {
             try {
                 elm[memberName] = newValue == null && elm.tagName.indexOf('-') === -1 ? '' : newValue;
@@ -542,9 +524,15 @@ var updateElement = function (oldVnode, newVnode, isSvgMode, memberName) {
         setAccessor(elm, memberName, oldVnodeAttrs[memberName], newVnodeAttrs[memberName], isSvgMode, newVnode.$flags$);
     }
 };
+var scopeId;
+var contentRef;
 var hostTagName;
+var useNativeShadowDom = false;
+var checkSlotFallbackVisibility = false;
+var checkSlotRelocate = false;
 var isSvgMode = false;
 var createElm = function (oldParentVNode, newParentVNode, childIndex, parentElm) {
+    // tslint:disable-next-line: prefer-const
     var newVNode = newParentVNode.$children$[childIndex];
     var i = 0;
     var elm;
@@ -563,7 +551,7 @@ var createElm = function (oldParentVNode, newParentVNode, childIndex, parentElm)
         if (newVNode.$children$) {
             for (i = 0; i < newVNode.$children$.length; ++i) {
                 // create the node
-                childNode = createElm(oldParentVNode, newVNode, i, elm);
+                childNode = createElm(oldParentVNode, newVNode, i);
                 // return node could have been null
                 if (childNode) {
                     // append our new node
@@ -579,7 +567,7 @@ var addVnodes = function (parentElm, before, parentVNode, vnodes, startIdx, endI
     var childNode;
     for (; startIdx <= endIdx; ++startIdx) {
         if (vnodes[startIdx]) {
-            childNode = createElm(null, parentVNode, startIdx, parentElm);
+            childNode = createElm(null, parentVNode, startIdx);
             if (childNode) {
                 vnodes[startIdx].$elm$ = childNode;
                 containerElm.insertBefore(childNode, before);
@@ -660,7 +648,7 @@ var updateChildren = function (parentElm, oldCh, newVNode, newCh) {
             if (idxInOld >= 0) {
                 elmToMove = oldCh[idxInOld];
                 if (elmToMove.$tag$ !== newStartVnode.$tag$) {
-                    node = createElm(oldCh && oldCh[newStartIdx], newVNode, idxInOld, parentElm);
+                    node = createElm(oldCh && oldCh[newStartIdx], newVNode, idxInOld);
                 }
                 else {
                     patch(elmToMove, newStartVnode);
@@ -671,7 +659,7 @@ var updateChildren = function (parentElm, oldCh, newVNode, newCh) {
             }
             else {
                 // new element
-                node = createElm(oldCh && oldCh[newStartIdx], newVNode, newStartIdx, parentElm);
+                node = createElm(oldCh && oldCh[newStartIdx], newVNode, newStartIdx);
                 newStartVnode = newCh[++newStartIdx];
             }
             if (node) {
@@ -737,6 +725,97 @@ var patch = function (oldVNode, newVNode) {
         elm.textContent = newVNode.$text$;
     }
 };
+var updateFallbackSlotVisibility = function (elm, childNode, childNodes, i, ilen, j, slotNameAttr, nodeType) {
+    childNodes = elm.childNodes;
+    for (i = 0, ilen = childNodes.length; i < ilen; i++) {
+        childNode = childNodes[i];
+        if (childNode.nodeType === 1 /* ElementNode */) {
+            if (childNode['s-sr']) {
+                // this is a slot fallback node
+                // get the slot name for this slot reference node
+                slotNameAttr = childNode['s-sn'];
+                // by default always show a fallback slot node
+                // then hide it if there are other slots in the light dom
+                childNode.hidden = false;
+                for (j = 0; j < ilen; j++) {
+                    if (childNodes[j]['s-hn'] !== childNode['s-hn']) {
+                        // this sibling node is from a different component
+                        nodeType = childNodes[j].nodeType;
+                        if (slotNameAttr !== '') {
+                            // this is a named fallback slot node
+                            if (nodeType === 1 /* ElementNode */ && slotNameAttr === childNodes[j].getAttribute('slot')) {
+                                childNode.hidden = true;
+                                break;
+                            }
+                        }
+                        else {
+                            // this is a default fallback slot node
+                            // any element or text node (with content)
+                            // should hide the default fallback slot node
+                            if (nodeType === 1 /* ElementNode */ || (nodeType === 3 /* TextNode */ && childNodes[j].textContent.trim() !== '')) {
+                                childNode.hidden = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // keep drilling down
+            updateFallbackSlotVisibility(childNode);
+        }
+    }
+};
+var relocateNodes = [];
+var relocateSlotContent = function (elm) {
+    // tslint:disable-next-line: prefer-const
+    var childNodes = elm.childNodes;
+    var ilen = childNodes.length;
+    var i = 0;
+    var j = 0;
+    var nodeType = 0;
+    var childNode;
+    var node;
+    var hostContentNodes;
+    var slotNameAttr;
+    for (ilen = childNodes.length; i < ilen; i++) {
+        childNode = childNodes[i];
+        if (childNode['s-sr'] && (node = childNode['s-cr'])) {
+            // first got the content reference comment node
+            // then we got it's parent, which is where all the host content is in now
+            hostContentNodes = node.parentNode.childNodes;
+            slotNameAttr = childNode['s-sn'];
+            for (j = hostContentNodes.length - 1; j >= 0; j--) {
+                node = hostContentNodes[j];
+                if (!node['s-cn'] && !node['s-nr'] && node['s-hn'] !== childNode['s-hn']) {
+                    // let's do some relocating to its new home
+                    // but never relocate a content reference node
+                    // that is suppose to always represent the original content location
+                    nodeType = node.nodeType;
+                    if (((nodeType === 3 /* TextNode */ || nodeType === 8 /* CommentNode */) && slotNameAttr === '') ||
+                        (nodeType === 1 /* ElementNode */ && node.getAttribute('slot') === null && slotNameAttr === '') ||
+                        (nodeType === 1 /* ElementNode */ && node.getAttribute('slot') === slotNameAttr)) {
+                        // it's possible we've already decided to relocate this node
+                        if (!relocateNodes.some(function (r) { return r.nodeToRelocate === node; })) {
+                            // made some changes to slots
+                            // let's make sure we also double check
+                            // fallbacks are correctly hidden or shown
+                            checkSlotFallbackVisibility = true;
+                            node['s-sn'] = slotNameAttr;
+                            // add to our list of nodes to relocate
+                            relocateNodes.push({
+                                slotRefNode: childNode,
+                                nodeToRelocate: node
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        if (childNode.nodeType === 1 /* ElementNode */) {
+            relocateSlotContent(childNode);
+        }
+    }
+};
 var callNodeRefs = function (vNode, isDestroy) {
     if (vNode) {
         vNode.$attrs$ && vNode.$attrs$.ref && vNode.$attrs$.ref(isDestroy ? null : vNode.$elm$);
@@ -757,11 +836,86 @@ var renderVdom = function (hostElm, hostRef, cmpMeta, renderFnResults) {
     else {
         renderFnResults = h(null, null, renderFnResults);
     }
+    if (BUILD.reflect && cmpMeta.$attrsToReflect$) {
+        renderFnResults.$attrs$ = renderFnResults.$attrs$ || {};
+        cmpMeta.$attrsToReflect$.forEach(function (_a) {
+            var propName = _a[0], attribute = _a[1];
+            return renderFnResults.$attrs$[attribute] = hostElm[propName];
+        });
+    }
     renderFnResults.$flags$ |= 4 /* isHost */;
     hostRef.$vnode$ = renderFnResults;
-    renderFnResults.$elm$ = oldVNode.$elm$ = (hostElm);
+    renderFnResults.$elm$ = oldVNode.$elm$ = (BUILD.shadowDom ? hostElm.shadowRoot || hostElm : hostElm);
+    if (BUILD.scoped || BUILD.shadowDom) {
+        scopeId = hostElm['s-sc'];
+    }
+    if (BUILD.slotRelocation) {
+        contentRef = hostElm['s-cr'];
+        useNativeShadowDom = supportsShadowDom && (cmpMeta.$flags$ & 1 /* shadowDomEncapsulation */) !== 0;
+        // always reset
+        checkSlotRelocate = checkSlotFallbackVisibility = false;
+    }
     // synchronous patch
     patch(oldVNode, renderFnResults);
+    if (BUILD.slotRelocation) {
+        if (checkSlotRelocate) {
+            relocateSlotContent(renderFnResults.$elm$);
+            for (var i = 0; i < relocateNodes.length; i++) {
+                var relocateNode = relocateNodes[i];
+                if (!relocateNode.nodeToRelocate['s-ol']) {
+                    // add a reference node marking this node's original location
+                    // keep a reference to this node for later lookups
+                    var orgLocationNode = (BUILD.isDebug || BUILD.hydrateServerSide)
+                        ? doc.createComment("org-loc")
+                        : doc.createTextNode('');
+                    orgLocationNode['s-nr'] = relocateNode.nodeToRelocate;
+                    relocateNode.nodeToRelocate.parentNode.insertBefore((relocateNode.nodeToRelocate['s-ol'] = orgLocationNode), relocateNode.nodeToRelocate);
+                }
+            }
+            // while we're moving nodes around existing nodes, temporarily disable
+            // the disconnectCallback from working
+            plt.$flags$ |= 1 /* isTmpDisconnected */;
+            for (var i = 0; i < relocateNodes.length; i++) {
+                var relocateNode = relocateNodes[i];
+                // by default we're just going to insert it directly
+                // after the slot reference node
+                var parentNodeRef = relocateNode.slotRefNode.parentNode;
+                var insertBeforeNode = relocateNode.slotRefNode.nextSibling;
+                var orgLocationNode = relocateNode.nodeToRelocate['s-ol'];
+                while (orgLocationNode = orgLocationNode.previousSibling) {
+                    var refNode = orgLocationNode['s-nr'];
+                    if (refNode && refNode) {
+                        if (refNode['s-sn'] === relocateNode.nodeToRelocate['s-sn']) {
+                            if (parentNodeRef === refNode.parentNode) {
+                                if ((refNode = refNode.nextSibling) && refNode && !refNode['s-nr']) {
+                                    insertBeforeNode = refNode;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if ((!insertBeforeNode && parentNodeRef !== relocateNode.nodeToRelocate.parentNode) ||
+                    (relocateNode.nodeToRelocate.nextSibling !== insertBeforeNode)) {
+                    // we've checked that it's worth while to relocate
+                    // since that the node to relocate
+                    // has a different next sibling or parent relocated
+                    if (relocateNode.nodeToRelocate !== insertBeforeNode) {
+                        // add it back to the dom but in its new home
+                        parentNodeRef.insertBefore(relocateNode.nodeToRelocate, insertBeforeNode);
+                    }
+                }
+            }
+            // done moving nodes around
+            // allow the disconnect callback to work again
+            plt.$flags$ &= ~1 /* isTmpDisconnected */;
+        }
+        if (checkSlotFallbackVisibility) {
+            updateFallbackSlotVisibility(renderFnResults.$elm$);
+        }
+        // always reset
+        relocateNodes.length = 0;
+    }
 };
 var safeCall = function (instance, method) { return __awaiter(_this, void 0, void 0, function () {
     var e_1;
@@ -795,12 +949,12 @@ var scheduleUpdate = function (elm, hostRef, cmpMeta, isInitialLoad) { return __
         // has already fired off its lifecycle update then
         // fire off the initial update
         {
-            writeTask(function () { return updateComponent(elm, hostRef, cmpMeta, isInitialLoad, instance); });
+            writeTask(function () { return updateComponent(elm, hostRef, cmpMeta, instance, isInitialLoad); });
         }
         return [2 /*return*/];
     });
 }); };
-var updateComponent = function (elm, hostRef, cmpMeta, isInitialLoad, instance) {
+var updateComponent = function (elm, hostRef, cmpMeta, instance, isInitialLoad) {
     // updateComponent
     {
         hostRef.$flags$ &= ~16 /* isQueuedForUpdate */;
@@ -822,7 +976,7 @@ var updateComponent = function (elm, hostRef, cmpMeta, isInitialLoad, instance) 
                 // looks like we've got child nodes to render into this host element
                 // or we need to update the css class/attrs on the host element
                 // DOM WRITE!
-                renderVdom(elm, hostRef, cmpMeta, instance.render());
+                renderVdom(elm, hostRef, cmpMeta, (BUILD.allRenderFn) ? instance.render() : (instance.render && instance.render()));
             }
             catch (e) {
                 consoleError(e);
@@ -913,19 +1067,10 @@ var disconnectedCallback = function (elm) {
         }
     }
 };
-var parsePropertyValue = function (propValue, expectedPropType) {
+var parsePropertyValue = function (propValue, propType) {
     // ensure this value is of the correct prop type
-    if (propValue != null && typeof propValue !== 'object' && typeof propValue !== 'function') {
-        if (expectedPropType & 4 /* Boolean */) {
-            // per the HTML spec, any string value means it is a boolean true value
-            // but we'll cheat here and say that the string "false" is the boolean false
-            return (propValue === 'false' ? false : propValue === '' || !!propValue);
-        }
-        if (expectedPropType & 2 /* Number */) {
-            // force it to be a number
-            return parseFloat(propValue);
-        }
-        if (expectedPropType & 1 /* String */) {
+    if (propValue != null && !isComplexType(propValue)) {
+        if (propType & 1 /* String */) {
             // could have been passed as a number or boolean
             // but we still want it as a string
             return String(propValue);
@@ -959,7 +1104,7 @@ var setValue = function (ref, propName, newVal, cmpMeta) {
                     watchMethods.forEach(function (watchMethodName) {
                         try {
                             // fire off each of the watch methods that are watching this property
-                            (hostRef.$lazyInstance$)[watchMethodName].call((hostRef.$lazyInstance$), newVal, oldVal, propName);
+                            (BUILD.lazyLoad ? hostRef.$lazyInstance$ : elm)[watchMethodName].call((BUILD.lazyLoad ? hostRef.$lazyInstance$ : elm), newVal, oldVal, propName);
                         }
                         catch (e) {
                             consoleError(e);
@@ -977,18 +1122,19 @@ var setValue = function (ref, propName, newVal, cmpMeta) {
         }
     }
 };
-var proxyComponent = function (Cstr, cmpMeta, isElementConstructor, proxyState) {
+var proxyComponent = function (Cstr, cmpMeta, flags) {
     if (cmpMeta.$members$) {
         if (Cstr.watchers) {
             cmpMeta.$watchers$ = Cstr.watchers;
         }
         // It's better to have a const than two Object.entries()
         var members = Object.entries(cmpMeta.$members$);
+        var prototype_1 = Cstr.prototype;
         members.forEach(function (_a) {
             var memberName = _a[0], memberFlags = _a[1][0];
-            if ((memberFlags & 31) || (proxyState && (memberFlags & 32 /* State */))) {
+            if ((memberFlags & 31) || (flags & 2 && (memberFlags & 32 /* State */))) {
                 // proxyComponent - prop
-                Object.defineProperty(Cstr.prototype, memberName, {
+                Object.defineProperty(prototype_1, memberName, {
                     get: function () {
                         // proxyComponent, get value
                         return getValue(this, memberName);
@@ -1001,9 +1147,9 @@ var proxyComponent = function (Cstr, cmpMeta, isElementConstructor, proxyState) 
                     enumerable: true
                 });
             }
-            else if (isElementConstructor && (memberFlags & 64 /* Method */)) {
+            else if (flags & 1 && (memberFlags & 64 /* Method */)) {
                 // proxyComponent - method
-                Object.defineProperty(Cstr.prototype, memberName, {
+                Object.defineProperty(prototype_1, memberName, {
                     value: function () {
                         var args = [];
                         for (var _i = 0; _i < arguments.length; _i++) {
@@ -1018,9 +1164,9 @@ var proxyComponent = function (Cstr, cmpMeta, isElementConstructor, proxyState) 
                 });
             }
         });
-        if (isElementConstructor) {
+        if (flags & 1) {
             var attrNameToPropName_1 = new Map();
-            Cstr.prototype.attributeChangedCallback = function (attrName, _oldValue, newValue) {
+            prototype_1.attributeChangedCallback = function (attrName, _oldValue, newValue) {
                 var propName = attrNameToPropName_1.get(attrName);
                 this[propName] = newValue === null && typeof this[propName] === 'boolean'
                     ? false
@@ -1044,14 +1190,14 @@ var proxyComponent = function (Cstr, cmpMeta, isElementConstructor, proxyState) 
     return Cstr;
 };
 var initializeComponent = function (elm, hostRef, cmpMeta, hmrVersionId, Cstr) { return __awaiter(_this, void 0, void 0, function () {
-    var style, scopeId, ancestorComponent;
+    var style, scopeId_1, ancestorComponent;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 if (!((hostRef.$flags$ & 256 /* hasInitializedComponent */) === 0)) return [3 /*break*/, 2];
                 // we haven't initialized this element yet
                 hostRef.$flags$ |= 256 /* hasInitializedComponent */;
-                return [4 /*yield*/, loadModule(cmpMeta, hostRef, hmrVersionId)];
+                return [4 /*yield*/, loadModule(cmpMeta)];
             case 1:
                 // lazy loaded components
                 // request the component's implementation to be
@@ -1064,7 +1210,7 @@ var initializeComponent = function (elm, hostRef, cmpMeta, hmrVersionId, Cstr) {
                     {
                         cmpMeta.$watchers$ = Cstr.watchers;
                     }
-                    proxyComponent(Cstr, cmpMeta, 0, 1);
+                    proxyComponent(Cstr, cmpMeta, 2 /* proxyState */);
                     Cstr.isProxied = true;
                 }
                 // ok, time to construct the instance
@@ -1086,11 +1232,11 @@ var initializeComponent = function (elm, hostRef, cmpMeta, hmrVersionId, Cstr) {
                 {
                     hostRef.$flags$ &= ~8 /* isConstructingInstance */;
                 }
-                fireConnectedCallback(hostRef.$lazyInstance$);
+                fireConnectedCallback();
                 if (!Cstr.isStyleRegistered && Cstr.style) {
                     style = Cstr.style;
-                    scopeId = getScopeId(cmpMeta.$tagName$, hostRef.$modeName$);
-                    registerStyle(scopeId, style);
+                    scopeId_1 = getScopeId(cmpMeta.$tagName$);
+                    registerStyle(scopeId_1, style);
                     Cstr.isStyleRegistered = true;
                 }
                 _a.label = 2;
@@ -1157,7 +1303,7 @@ var connectedCallback = function (elm, cmpMeta) {
                 initializeComponent(elm, hostRef, cmpMeta);
             }
         }
-        fireConnectedCallback(hostRef.$lazyInstance$);
+        fireConnectedCallback();
     }
 };
 var bootstrapLazy = function (lazyBundles, options) {
@@ -1169,7 +1315,7 @@ var bootstrapLazy = function (lazyBundles, options) {
     var y = /*@__PURE__*/ head.querySelector('meta[charset]');
     var visibilityStyle = /*@__PURE__*/ doc.createElement('style');
     Object.assign(plt, options);
-    plt.$resourcesUrl$ = new URL(options.resourcesUrl || '/', doc.baseURI).href;
+    plt.$resourcesUrl$ = new URL(options.resourcesUrl || '/', win.location.href).href;
     if (options.syncQueue) {
         plt.$flags$ |= 4 /* queueSync */;
     }
@@ -1227,7 +1373,7 @@ var bootstrapLazy = function (lazyBundles, options) {
         cmpMeta.$lazyBundleIds$ = lazyBundle[0];
         if (!exclude.includes(tagName) && !customElements.get(tagName)) {
             cmpTags.push(tagName);
-            customElements.define(tagName, proxyComponent(HostElement, cmpMeta, 1, 0));
+            customElements.define(tagName, proxyComponent(HostElement, cmpMeta, 1 /* isElementConstructor */));
         }
     }); });
     // visibilityStyle.innerHTML = cmpTags.map(t => `${t}:not(.hydrated)`) + '{display:none}';
@@ -1235,4 +1381,4 @@ var bootstrapLazy = function (lazyBundles, options) {
     visibilityStyle.setAttribute('data-styles', '');
     head.insertBefore(visibilityStyle, y ? y.nextSibling : head.firstChild);
 };
-export { patchBrowser as a, bootstrapLazy as b, patchEsm as c, registerInstance as d, h as e };
+export { patchEsm as a, bootstrapLazy as b, h, patchBrowser as p, registerInstance as r };

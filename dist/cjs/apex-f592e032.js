@@ -1,6 +1,6 @@
 'use strict';
 
-const BUILD = {"allRenderFn":true,"cmpDidLoad":true,"cmpDidUnload":true,"cmpDidUpdate":false,"cmpDidRender":false,"cmpWillLoad":false,"cmpWillUpdate":false,"cmpWillRender":false,"connectedCallback":false,"disconnectedCallback":false,"element":false,"event":false,"hasRenderFn":true,"lifecycle":true,"hostListener":false,"hostListenerTargetWindow":false,"hostListenerTargetDocument":false,"hostListenerTargetBody":false,"hostListenerTargetParent":false,"hostListenerTarget":false,"member":true,"method":true,"mode":false,"noVdomRender":false,"observeAttribute":true,"prop":true,"propMutable":true,"reflect":false,"scoped":false,"shadowDom":false,"slot":false,"slotRelocation":false,"state":true,"style":true,"svg":false,"updatable":true,"vdomAttribute":true,"vdomClass":true,"vdomFunctional":true,"vdomKey":true,"vdomListener":true,"vdomRef":true,"vdomRender":true,"vdomStyle":true,"vdomText":true,"watchCallback":true,"taskQueue":true,"lazyLoad":true,"hydrateServerSide":false,"cssVarShim":true,"hydrateClientSide":false,"isDebug":false,"isDev":false,"lifecycleDOMEvents":false,"profile":false,"hotModuleReplacement":false,"constructableCSS":true,"cssAnnotations":true};
+const BUILD = {"allRenderFn":true,"cmpDidLoad":true,"cmpDidUnload":true,"cmpDidUpdate":false,"cmpDidRender":false,"cmpWillLoad":false,"cmpWillUpdate":false,"cmpWillRender":false,"connectedCallback":false,"disconnectedCallback":false,"element":false,"event":false,"hasRenderFn":true,"lifecycle":true,"hostListener":false,"hostListenerTargetWindow":false,"hostListenerTargetDocument":false,"hostListenerTargetBody":false,"hostListenerTargetParent":false,"hostListenerTarget":false,"member":true,"method":true,"mode":false,"noVdomRender":false,"observeAttribute":true,"prop":true,"propBoolean":false,"propNumber":false,"propString":true,"propMutable":true,"reflect":false,"scoped":false,"shadowDom":false,"slot":false,"slotRelocation":false,"state":true,"style":true,"svg":false,"updatable":true,"vdomAttribute":true,"vdomClass":true,"vdomFunctional":true,"vdomKey":true,"vdomListener":true,"vdomRef":true,"vdomRender":true,"vdomStyle":true,"vdomText":true,"watchCallback":true,"taskQueue":true,"lazyLoad":true,"hydrateServerSide":false,"cssVarShim":true,"hydrateClientSide":false,"isDebug":false,"isDev":false,"lifecycleDOMEvents":false,"profile":false,"hotModuleReplacement":false,"constructableCSS":true,"cssAnnotations":true};
 const NAMESPACE = 'apex';
 
 const win = window;
@@ -12,6 +12,7 @@ const plt = {
     ael: (el, eventName, listener, opts) => el.addEventListener(eventName, listener, opts),
     rel: (el, eventName, listener, opts) => el.removeEventListener(eventName, listener, opts),
 };
+const supportsShadowDom = false;
 const supportsConstructibleStylesheets = (() => {
     try {
         new CSSStyleSheet();
@@ -25,16 +26,13 @@ const hostRefs = new WeakMap();
 const getHostRef = (ref) => hostRefs.get(ref);
 const registerInstance = (lazyInstance, hostRef) => hostRefs.set(hostRef.$lazyInstance$ = lazyInstance, hostRef);
 const registerHost = (elm) => {
-    // TODO: it's so ugly, but minifies really well
     {
         const hostRef = {
             $flags$: 0,
-            $hostElement$: elm
+            $hostElement$: elm,
+            $instanceValues$: new Map()
         };
         hostRef.$onReadyPromise$ = new Promise(r => hostRef.$onReadyResolve$ = r);
-        {
-            hostRef.$instanceValues$ = new Map();
-        }
         return hostRefs.set(elm, hostRef);
     }
 };
@@ -135,6 +133,7 @@ const EMPTY_OBJ = {};
 
 const isDef = (v) => v != null;
 const toLowerCase = (str) => str.toLowerCase();
+const isComplexType = (o) => ['object', 'function'].includes(typeof o);
 
 function getDynamicImportFunction(namespace) {
     return `__sc_import_${namespace.replace(/\s|-/g, '_')}`;
@@ -144,24 +143,24 @@ const patchEsm = () => {
     // @ts-ignore
     if (!(win.CSS && win.CSS.supports && win.CSS.supports('color', 'var(--c)'))) {
         // @ts-ignore
-        return Promise.resolve(require('./css-shim-229ebf7a-56ba83b5.js'));
+        return Promise.resolve(require('./css-shim-f7ddb189-673dd43d.js'));
     }
     return Promise.resolve();
 };
 const patchBrowser = async () => {
     // @ts-ignore
-    const importMeta = (typeof document === 'undefined' ? new (require('u' + 'rl').URL)('file:' + __filename).href : (document.currentScript && document.currentScript.src || new URL('apex-28c6032a.js', document.baseURI).href));
+    const importMeta = (typeof document === 'undefined' ? new (require('u' + 'rl').URL)('file:' + __filename).href : (document.currentScript && document.currentScript.src || new URL('apex-f592e032.js', document.baseURI).href));
     if (importMeta !== '') {
         return Promise.resolve(new URL('.', importMeta).href);
     }
     else {
         const scriptElm = Array.from(doc.querySelectorAll('script')).find(s => (s.src.includes(`/${NAMESPACE}.esm.js`) ||
             s.getAttribute('data-namespace') === NAMESPACE));
-        const resourcesUrl = new URL('.', new URL(scriptElm.getAttribute('data-resources-url') || scriptElm.src, doc.baseURI));
+        const resourcesUrl = new URL('.', new URL(scriptElm.getAttribute('data-resources-url') || scriptElm.src, win.location.href));
         patchDynamicImport(resourcesUrl.href);
         if (!window.customElements) {
             // @ts-ignore
-            await Promise.resolve(require('./dom-7eb7509a-4c879aea.js'));
+            await Promise.resolve(require('./dom-a0c82e31-d4621515.js'));
         }
         return resourcesUrl.href;
     }
@@ -208,7 +207,7 @@ const registerStyle = (scopeId, cssText) => {
     styles.set(scopeId, style);
 };
 const addStyle = (styleContainerNode, tagName, mode, hostElm) => {
-    let scopeId = getScopeId(tagName, mode);
+    let scopeId = getScopeId(tagName);
     let style = styles.get(scopeId);
     // if an element is NOT connected then getRootNode() will return the wrong root node
     // so the fallback is to always use the document for the root node in those cases
@@ -267,91 +266,70 @@ const getScopeId = (tagName, mode) => 'sc-' + (tagName);
  *
  * Modified for Stencil's compiler and vdom
  */
-const stack = [];
-function h(nodeName, vnodeData) {
-    let children = null;
-    let lastSimple = false;
+// const stack: any[] = [];
+// export function h(nodeName: string | d.FunctionalComponent, vnodeData: d.PropsType, child?: d.ChildType): d.VNode;
+// export function h(nodeName: string | d.FunctionalComponent, vnodeData: d.PropsType, ...children: d.ChildType[]): d.VNode;
+const h = (nodeName, vnodeData, ...children) => {
+    let child = null;
     let simple = false;
-    let i = arguments.length;
-    let vkey;
-    for (; i-- > 2;) {
-        stack.push(arguments[i]);
-    }
-    while (stack.length > 0) {
-        let child = stack.pop();
-        if (child && child.pop !== undefined) {
-            for (i = child.length; i--;) {
-                stack.push(child[i]);
+    let lastSimple = false;
+    let key;
+    let vNodeChildren = [];
+    const walk = (c) => {
+        for (let i = 0; i < c.length; i++) {
+            child = c[i];
+            if (Array.isArray(child)) {
+                walk(child);
             }
-        }
-        else {
-            if (typeof child === 'boolean') {
-                child = null;
-            }
-            if ((simple = typeof nodeName !== 'function')) {
-                if (child == null) {
-                    child = '';
-                }
-                else if (typeof child === 'number') {
+            else if (child != null && typeof child !== 'boolean') {
+                if (simple = typeof nodeName !== 'function' && !isComplexType(child)) {
                     child = String(child);
                 }
-                else if (typeof child !== 'string') {
-                    simple = false;
+                if (simple && lastSimple) {
+                    // If the previous child was simple (string), we merge both
+                    vNodeChildren[vNodeChildren.length - 1].$text$ += child;
                 }
+                else {
+                    // Append a new vNode, if it's text, we create a text vNode
+                    vNodeChildren.push(simple ? { $flags$: 0, $text$: child } : child);
+                }
+                lastSimple = simple;
             }
-            if (simple && lastSimple) {
-                children[children.length - 1].$text$ += child;
-            }
-            else if (children === null) {
-                children = [simple ? { $flags$: 0, $text$: child } : child];
-            }
-            else {
-                children.push(simple ? { $flags$: 0, $text$: child } : child);
-            }
-            lastSimple = simple;
         }
-    }
-    {
-        if (vnodeData != null) {
-            // normalize class / classname attributes
-            if (vnodeData.className) {
-                vnodeData['class'] = vnodeData.className;
-            }
-            if (typeof vnodeData['class'] === 'object') {
-                for (i in vnodeData['class']) {
-                    if (vnodeData['class'][i]) {
-                        stack.push(i);
-                    }
-                }
-                vnodeData['class'] = stack.join(' ');
-                stack.length = 0;
-            }
-            if (vnodeData.key != null) {
-                vkey = vnodeData.key;
+    };
+    walk(children);
+    if (vnodeData) {
+        // normalize class / classname attributes
+        {
+            key = vnodeData.key || undefined;
+        }
+        {
+            const classData = vnodeData.className || vnodeData.class;
+            if (classData) {
+                vnodeData.class = typeof classData !== 'object'
+                    ? classData
+                    : Object.keys(classData)
+                        .filter(k => classData[k])
+                        .join(' ');
             }
         }
     }
     if (typeof nodeName === 'function') {
         // nodeName is a functional component
-        return nodeName(vnodeData, children || [], vdomFnUtils);
+        return nodeName(vnodeData, vNodeChildren, vdomFnUtils);
     }
     const vnode = {
+        $flags$: 0,
         $tag$: nodeName,
-        $children$: children,
+        $children$: vNodeChildren.length > 0 ? vNodeChildren : null,
         $elm$: undefined,
-        $flags$: 0
+        $attrs$: vnodeData,
     };
     {
-        vnode.$attrs$ = vnodeData;
-    }
-    {
-        vnode.$text$ = undefined;
-    }
-    {
-        vnode.$key$ = vkey;
+        vnode.$key$ = key;
     }
     return vnode;
-}
+};
 const Host = {};
 const vdomFnUtils = {
     'forEach': (children, cb) => children.map(convertToPublic).forEach(cb),
@@ -461,7 +439,7 @@ const setAccessor = (elm, memberName, oldValue, newValue, isSvg, flags) => {
     else {
         // Set property if it exists and it's not a SVG
         const isProp = isMemberInElement(elm, memberName);
-        const isComplex = ['object', 'function'].includes(typeof newValue);
+        const isComplex = isComplexType(newValue);
         if ((isProp || (isComplex && newValue !== null)) && !isSvg) {
             try {
                 elm[memberName] = newValue == null && elm.tagName.indexOf('-') === -1 ? '' : newValue;
@@ -503,10 +481,17 @@ const updateElement = (oldVnode, newVnode, isSvgMode, memberName) => {
         setAccessor(elm, memberName, oldVnodeAttrs[memberName], newVnodeAttrs[memberName], isSvgMode, newVnode.$flags$);
     }
 };
+
+let scopeId;
+let contentRef;
 let hostTagName;
+let useNativeShadowDom = false;
+let checkSlotFallbackVisibility = false;
+let checkSlotRelocate = false;
 let isSvgMode = false;
 const createElm = (oldParentVNode, newParentVNode, childIndex, parentElm) => {
-    const newVNode = newParentVNode.$children$[childIndex];
+    // tslint:disable-next-line: prefer-const
+    let newVNode = newParentVNode.$children$[childIndex];
     let i = 0;
     let elm;
     let childNode;
@@ -524,7 +509,7 @@ const createElm = (oldParentVNode, newParentVNode, childIndex, parentElm) => {
         if (newVNode.$children$) {
             for (i = 0; i < newVNode.$children$.length; ++i) {
                 // create the node
-                childNode = createElm(oldParentVNode, newVNode, i, elm);
+                childNode = createElm(oldParentVNode, newVNode, i);
                 // return node could have been null
                 if (childNode) {
                     // append our new node
@@ -540,7 +525,7 @@ const addVnodes = (parentElm, before, parentVNode, vnodes, startIdx, endIdx) => 
     let childNode;
     for (; startIdx <= endIdx; ++startIdx) {
         if (vnodes[startIdx]) {
-            childNode = createElm(null, parentVNode, startIdx, parentElm);
+            childNode = createElm(null, parentVNode, startIdx);
             if (childNode) {
                 vnodes[startIdx].$elm$ = childNode;
                 containerElm.insertBefore(childNode, before);
@@ -621,7 +606,7 @@ const updateChildren = (parentElm, oldCh, newVNode, newCh) => {
             if (idxInOld >= 0) {
                 elmToMove = oldCh[idxInOld];
                 if (elmToMove.$tag$ !== newStartVnode.$tag$) {
-                    node = createElm(oldCh && oldCh[newStartIdx], newVNode, idxInOld, parentElm);
+                    node = createElm(oldCh && oldCh[newStartIdx], newVNode, idxInOld);
                 }
                 else {
                     patch(elmToMove, newStartVnode);
@@ -632,7 +617,7 @@ const updateChildren = (parentElm, oldCh, newVNode, newCh) => {
             }
             else {
                 // new element
-                node = createElm(oldCh && oldCh[newStartIdx], newVNode, newStartIdx, parentElm);
+                node = createElm(oldCh && oldCh[newStartIdx], newVNode, newStartIdx);
                 newStartVnode = newCh[++newStartIdx];
             }
             if (node) {
@@ -698,6 +683,97 @@ const patch = (oldVNode, newVNode) => {
         elm.textContent = newVNode.$text$;
     }
 };
+const updateFallbackSlotVisibility = (elm, childNode, childNodes, i, ilen, j, slotNameAttr, nodeType) => {
+    childNodes = elm.childNodes;
+    for (i = 0, ilen = childNodes.length; i < ilen; i++) {
+        childNode = childNodes[i];
+        if (childNode.nodeType === 1 /* ElementNode */) {
+            if (childNode['s-sr']) {
+                // this is a slot fallback node
+                // get the slot name for this slot reference node
+                slotNameAttr = childNode['s-sn'];
+                // by default always show a fallback slot node
+                // then hide it if there are other slots in the light dom
+                childNode.hidden = false;
+                for (j = 0; j < ilen; j++) {
+                    if (childNodes[j]['s-hn'] !== childNode['s-hn']) {
+                        // this sibling node is from a different component
+                        nodeType = childNodes[j].nodeType;
+                        if (slotNameAttr !== '') {
+                            // this is a named fallback slot node
+                            if (nodeType === 1 /* ElementNode */ && slotNameAttr === childNodes[j].getAttribute('slot')) {
+                                childNode.hidden = true;
+                                break;
+                            }
+                        }
+                        else {
+                            // this is a default fallback slot node
+                            // any element or text node (with content)
+                            // should hide the default fallback slot node
+                            if (nodeType === 1 /* ElementNode */ || (nodeType === 3 /* TextNode */ && childNodes[j].textContent.trim() !== '')) {
+                                childNode.hidden = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // keep drilling down
+            updateFallbackSlotVisibility(childNode);
+        }
+    }
+};
+const relocateNodes = [];
+const relocateSlotContent = (elm) => {
+    // tslint:disable-next-line: prefer-const
+    let childNodes = elm.childNodes;
+    let ilen = childNodes.length;
+    let i = 0;
+    let j = 0;
+    let nodeType = 0;
+    let childNode;
+    let node;
+    let hostContentNodes;
+    let slotNameAttr;
+    for (ilen = childNodes.length; i < ilen; i++) {
+        childNode = childNodes[i];
+        if (childNode['s-sr'] && (node = childNode['s-cr'])) {
+            // first got the content reference comment node
+            // then we got it's parent, which is where all the host content is in now
+            hostContentNodes = node.parentNode.childNodes;
+            slotNameAttr = childNode['s-sn'];
+            for (j = hostContentNodes.length - 1; j >= 0; j--) {
+                node = hostContentNodes[j];
+                if (!node['s-cn'] && !node['s-nr'] && node['s-hn'] !== childNode['s-hn']) {
+                    // let's do some relocating to its new home
+                    // but never relocate a content reference node
+                    // that is suppose to always represent the original content location
+                    nodeType = node.nodeType;
+                    if (((nodeType === 3 /* TextNode */ || nodeType === 8 /* CommentNode */) && slotNameAttr === '') ||
+                        (nodeType === 1 /* ElementNode */ && node.getAttribute('slot') === null && slotNameAttr === '') ||
+                        (nodeType === 1 /* ElementNode */ && node.getAttribute('slot') === slotNameAttr)) {
+                        // it's possible we've already decided to relocate this node
+                        if (!relocateNodes.some(r => r.nodeToRelocate === node)) {
+                            // made some changes to slots
+                            // let's make sure we also double check
+                            // fallbacks are correctly hidden or shown
+                            checkSlotFallbackVisibility = true;
+                            node['s-sn'] = slotNameAttr;
+                            // add to our list of nodes to relocate
+                            relocateNodes.push({
+                                slotRefNode: childNode,
+                                nodeToRelocate: node
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        if (childNode.nodeType === 1 /* ElementNode */) {
+            relocateSlotContent(childNode);
+        }
+    }
+};
 const callNodeRefs = (vNode, isDestroy) => {
     if (vNode) {
         vNode.$attrs$ && vNode.$attrs$.ref && vNode.$attrs$.ref(isDestroy ? null : vNode.$elm$);
@@ -718,11 +794,83 @@ const renderVdom = (hostElm, hostRef, cmpMeta, renderFnResults) => {
     else {
         renderFnResults = h(null, null, renderFnResults);
     }
+    if (BUILD.reflect && cmpMeta.$attrsToReflect$) {
+        renderFnResults.$attrs$ = renderFnResults.$attrs$ || {};
+        cmpMeta.$attrsToReflect$.forEach(([propName, attribute]) => renderFnResults.$attrs$[attribute] = hostElm[propName]);
+    }
     renderFnResults.$flags$ |= 4 /* isHost */;
     hostRef.$vnode$ = renderFnResults;
-    renderFnResults.$elm$ = oldVNode.$elm$ = (hostElm);
+    renderFnResults.$elm$ = oldVNode.$elm$ = (BUILD.shadowDom ? hostElm.shadowRoot || hostElm : hostElm);
+    if (BUILD.scoped || BUILD.shadowDom) {
+        scopeId = hostElm['s-sc'];
+    }
+    if (BUILD.slotRelocation) {
+        contentRef = hostElm['s-cr'];
+        useNativeShadowDom = supportsShadowDom && (cmpMeta.$flags$ & 1 /* shadowDomEncapsulation */) !== 0;
+        // always reset
+        checkSlotRelocate = checkSlotFallbackVisibility = false;
+    }
     // synchronous patch
     patch(oldVNode, renderFnResults);
+    if (BUILD.slotRelocation) {
+        if (checkSlotRelocate) {
+            relocateSlotContent(renderFnResults.$elm$);
+            for (let i = 0; i < relocateNodes.length; i++) {
+                const relocateNode = relocateNodes[i];
+                if (!relocateNode.nodeToRelocate['s-ol']) {
+                    // add a reference node marking this node's original location
+                    // keep a reference to this node for later lookups
+                    const orgLocationNode = (BUILD.isDebug || BUILD.hydrateServerSide)
+                        ? doc.createComment(`org-loc`)
+                        : doc.createTextNode('');
+                    orgLocationNode['s-nr'] = relocateNode.nodeToRelocate;
+                    relocateNode.nodeToRelocate.parentNode.insertBefore((relocateNode.nodeToRelocate['s-ol'] = orgLocationNode), relocateNode.nodeToRelocate);
+                }
+            }
+            // while we're moving nodes around existing nodes, temporarily disable
+            // the disconnectCallback from working
+            plt.$flags$ |= 1 /* isTmpDisconnected */;
+            for (let i = 0; i < relocateNodes.length; i++) {
+                const relocateNode = relocateNodes[i];
+                // by default we're just going to insert it directly
+                // after the slot reference node
+                const parentNodeRef = relocateNode.slotRefNode.parentNode;
+                let insertBeforeNode = relocateNode.slotRefNode.nextSibling;
+                let orgLocationNode = relocateNode.nodeToRelocate['s-ol'];
+                while (orgLocationNode = orgLocationNode.previousSibling) {
+                    let refNode = orgLocationNode['s-nr'];
+                    if (refNode && refNode) {
+                        if (refNode['s-sn'] === relocateNode.nodeToRelocate['s-sn']) {
+                            if (parentNodeRef === refNode.parentNode) {
+                                if ((refNode = refNode.nextSibling) && refNode && !refNode['s-nr']) {
+                                    insertBeforeNode = refNode;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if ((!insertBeforeNode && parentNodeRef !== relocateNode.nodeToRelocate.parentNode) ||
+                    (relocateNode.nodeToRelocate.nextSibling !== insertBeforeNode)) {
+                    // we've checked that it's worth while to relocate
+                    // since that the node to relocate
+                    // has a different next sibling or parent relocated
+                    if (relocateNode.nodeToRelocate !== insertBeforeNode) {
+                        // add it back to the dom but in its new home
+                        parentNodeRef.insertBefore(relocateNode.nodeToRelocate, insertBeforeNode);
+                    }
+                }
+            }
+            // done moving nodes around
+            // allow the disconnect callback to work again
+            plt.$flags$ &= ~1 /* isTmpDisconnected */;
+        }
+        if (checkSlotFallbackVisibility) {
+            updateFallbackSlotVisibility(renderFnResults.$elm$);
+        }
+        // always reset
+        relocateNodes.length = 0;
+    }
 };
 
 const safeCall = async (instance, method) => {
@@ -744,10 +892,10 @@ const scheduleUpdate = async (elm, hostRef, cmpMeta, isInitialLoad) => {
     // has already fired off its lifecycle update then
     // fire off the initial update
     {
-        writeTask(() => updateComponent(elm, hostRef, cmpMeta, isInitialLoad, instance));
+        writeTask(() => updateComponent(elm, hostRef, cmpMeta, instance, isInitialLoad));
     }
 };
-const updateComponent = (elm, hostRef, cmpMeta, isInitialLoad, instance) => {
+const updateComponent = (elm, hostRef, cmpMeta, instance, isInitialLoad) => {
     // updateComponent
     {
         hostRef.$flags$ &= ~16 /* isQueuedForUpdate */;
@@ -769,7 +917,7 @@ const updateComponent = (elm, hostRef, cmpMeta, isInitialLoad, instance) => {
                 // looks like we've got child nodes to render into this host element
                 // or we need to update the css class/attrs on the host element
                 // DOM WRITE!
-                renderVdom(elm, hostRef, cmpMeta, instance.render());
+                renderVdom(elm, hostRef, cmpMeta, (BUILD.allRenderFn) ? instance.render() : (instance.render && instance.render()));
             }
             catch (e) {
                 consoleError(e);
@@ -862,19 +1010,10 @@ const disconnectedCallback = (elm) => {
     }
 };
 
-const parsePropertyValue = (propValue, expectedPropType) => {
+const parsePropertyValue = (propValue, propType) => {
     // ensure this value is of the correct prop type
-    if (propValue != null && typeof propValue !== 'object' && typeof propValue !== 'function') {
-        if (expectedPropType & 4 /* Boolean */) {
-            // per the HTML spec, any string value means it is a boolean true value
-            // but we'll cheat here and say that the string "false" is the boolean false
-            return (propValue === 'false' ? false : propValue === '' || !!propValue);
-        }
-        if (expectedPropType & 2 /* Number */) {
-            // force it to be a number
-            return parseFloat(propValue);
-        }
-        if (expectedPropType & 1 /* String */) {
+    if (propValue != null && !isComplexType(propValue)) {
+        if (propType & 1 /* String */) {
             // could have been passed as a number or boolean
             // but we still want it as a string
             return String(propValue);
@@ -909,7 +1048,7 @@ const setValue = (ref, propName, newVal, cmpMeta) => {
                     watchMethods.forEach(watchMethodName => {
                         try {
                             // fire off each of the watch methods that are watching this property
-                            (hostRef.$lazyInstance$)[watchMethodName].call((hostRef.$lazyInstance$), newVal, oldVal, propName);
+                            (BUILD.lazyLoad ? hostRef.$lazyInstance$ : elm)[watchMethodName].call((BUILD.lazyLoad ? hostRef.$lazyInstance$ : elm), newVal, oldVal, propName);
                         }
                         catch (e) {
                             consoleError(e);
@@ -928,17 +1067,18 @@ const setValue = (ref, propName, newVal, cmpMeta) => {
     }
 };
 
-const proxyComponent = (Cstr, cmpMeta, isElementConstructor, proxyState) => {
+const proxyComponent = (Cstr, cmpMeta, flags) => {
     if (cmpMeta.$members$) {
         if (Cstr.watchers) {
             cmpMeta.$watchers$ = Cstr.watchers;
         }
         // It's better to have a const than two Object.entries()
         const members = Object.entries(cmpMeta.$members$);
+        const prototype = Cstr.prototype;
         members.forEach(([memberName, [memberFlags]]) => {
-            if ((memberFlags & 31) || (proxyState && (memberFlags & 32 /* State */))) {
+            if ((memberFlags & 31) || (flags & 2 && (memberFlags & 32 /* State */))) {
                 // proxyComponent - prop
-                Object.defineProperty(Cstr.prototype, memberName, {
+                Object.defineProperty(prototype, memberName, {
                     get() {
                         // proxyComponent, get value
                         return getValue(this, memberName);
@@ -951,9 +1091,9 @@ const proxyComponent = (Cstr, cmpMeta, isElementConstructor, proxyState) => {
                     enumerable: true
                 });
             }
-            else if (isElementConstructor && (memberFlags & 64 /* Method */)) {
+            else if (flags & 1 && (memberFlags & 64 /* Method */)) {
                 // proxyComponent - method
-                Object.defineProperty(Cstr.prototype, memberName, {
+                Object.defineProperty(prototype, memberName, {
                     value(...args) {
                         const ref = getHostRef(this);
                         return ref.$onReadyPromise$.then(() => ref.$lazyInstance$[memberName](...args));
@@ -961,9 +1101,9 @@ const proxyComponent = (Cstr, cmpMeta, isElementConstructor, proxyState) => {
                 });
             }
         });
-        if (isElementConstructor) {
+        if (flags & 1) {
             const attrNameToPropName = new Map();
-            Cstr.prototype.attributeChangedCallback = function (attrName, _oldValue, newValue) {
+            prototype.attributeChangedCallback = function (attrName, _oldValue, newValue) {
                 const propName = attrNameToPropName.get(attrName);
                 this[propName] = newValue === null && typeof this[propName] === 'boolean'
                     ? false
@@ -992,7 +1132,7 @@ const initializeComponent = async (elm, hostRef, cmpMeta, hmrVersionId, Cstr) =>
             // lazy loaded components
             // request the component's implementation to be
             // wired up with the host element
-            Cstr = await loadModule(cmpMeta, hostRef, hmrVersionId);
+            Cstr = await loadModule(cmpMeta);
             if (!Cstr.isProxied) {
                 // we'eve never proxied this Constructor before
                 // let's add the getters/setters to its prototype before
@@ -1000,7 +1140,7 @@ const initializeComponent = async (elm, hostRef, cmpMeta, hmrVersionId, Cstr) =>
                 {
                     cmpMeta.$watchers$ = Cstr.watchers;
                 }
-                proxyComponent(Cstr, cmpMeta, 0, 1);
+                proxyComponent(Cstr, cmpMeta, 2 /* proxyState */);
                 Cstr.isProxied = true;
             }
             // ok, time to construct the instance
@@ -1022,12 +1162,12 @@ const initializeComponent = async (elm, hostRef, cmpMeta, hmrVersionId, Cstr) =>
             {
                 hostRef.$flags$ &= ~8 /* isConstructingInstance */;
             }
-            fireConnectedCallback(hostRef.$lazyInstance$);
+            fireConnectedCallback();
         }
         if (!Cstr.isStyleRegistered && Cstr.style) {
             // this component has styles but we haven't registered them yet
             let style = Cstr.style;
-            let scopeId = getScopeId(cmpMeta.$tagName$, hostRef.$modeName$);
+            let scopeId = getScopeId(cmpMeta.$tagName$);
             registerStyle(scopeId, style);
             Cstr.isStyleRegistered = true;
         }
@@ -1091,7 +1231,7 @@ const connectedCallback = (elm, cmpMeta) => {
                 initializeComponent(elm, hostRef, cmpMeta);
             }
         }
-        fireConnectedCallback(hostRef.$lazyInstance$);
+        fireConnectedCallback();
     }
 };
 
@@ -1103,7 +1243,7 @@ const bootstrapLazy = (lazyBundles, options = {}) => {
     const y = /*@__PURE__*/ head.querySelector('meta[charset]');
     const visibilityStyle = /*@__PURE__*/ doc.createElement('style');
     Object.assign(plt, options);
-    plt.$resourcesUrl$ = new URL(options.resourcesUrl || '/', doc.baseURI).href;
+    plt.$resourcesUrl$ = new URL(options.resourcesUrl || '/', win.location.href).href;
     if (options.syncQueue) {
         plt.$flags$ |= 4 /* queueSync */;
     }
@@ -1157,7 +1297,7 @@ const bootstrapLazy = (lazyBundles, options = {}) => {
         cmpMeta.$lazyBundleIds$ = lazyBundle[0];
         if (!exclude.includes(tagName) && !customElements.get(tagName)) {
             cmpTags.push(tagName);
-            customElements.define(tagName, proxyComponent(HostElement, cmpMeta, 1, 0));
+            customElements.define(tagName, proxyComponent(HostElement, cmpMeta, 1 /* isElementConstructor */));
         }
     }));
     // visibilityStyle.innerHTML = cmpTags.map(t => `${t}:not(.hydrated)`) + '{display:none}';

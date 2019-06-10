@@ -1,4 +1,4 @@
-import { c as patchEsm, b as bootstrapLazy } from './apex-71457d64.js';
+import { a as patchEsm, b as bootstrapLazy } from './apex-585370ee.js';
 
 const defineCustomElements = (win, options) => {
   return patchEsm().then(() => {

@@ -37,10 +37,10 @@
     "release": "standard-version"
   },
   "peerDependencies": {
-    "apexcharts": "^3.7.0"
+    "apexcharts": "^3.8.0"
   },
   "devDependencies": {
-    "@stencil/core": "^1.0.0-beta.5",
+    "@stencil/core": "^1.0.2",
     "standard-version": "^5.0.2"
   },
   "license": "MIT",
@@ -50,6 +50,6 @@
     }
   },
   "dependencies": {
-    "apexcharts": "^3.7.0"
+    "apexcharts": "^3.8.0"
   }
 }
